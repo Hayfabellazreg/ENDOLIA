@@ -1,0 +1,30 @@
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000,
+})
+
+// Request interceptor
+api.interceptors.request.use(
+  (config) => config,
+  (error) => Promise.reject(error)
+)
+
+// Response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message)
+    return Promise.reject(error)
+  }
+)
+
+export const checkHealth = () => api.get('/health')
+export const getUsers = () => api.get('/users')
+export const createUser = (data) => api.post('/users', data)
+
+export default api
