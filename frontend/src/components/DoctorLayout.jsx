@@ -1,14 +1,14 @@
 import { Outlet } from 'react-router-dom'
-import Sidebar from './Sidebar'
-import Topbar from './Topbar'
+import AppSidebar from './Sidebar'
+import AppTopbar from './Topbar'
 import '../styles/doctor.css'
 
-export default function DoctorLayout() {
+export default function AppLayout() {
   return (
     <div className="doctor-layout">
-      <Sidebar />
+      <AppSidebar />
       <div className="doctor-main">
-        <Topbar />
+        <AppTopbar />
         <div className="doctor-content animate-in">
           <Outlet />
         </div>

@@ -1,86 +1,105 @@
-import { Users, Microscope, Brain, Calendar, ArrowRight, TrendingUp, Clock } from 'lucide-react'
+import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { stats, rendezvous, examens, analyses, doctor } from '../../data/mockData'
+import { Users, Microscope, Brain, Calendar, ArrowRight, TrendingUp, Clock } from 'lucide-react'
 
-const avatarColors = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
-
-function StatCard({ value, label, trend, icon: Icon, colorClass }) {
-  return (
-    <div className={`stat-card stat-card-${colorClass}`}>
-      <div className={`stat-icon stat-icon-${colorClass}`}>
-        <Icon />
-      </div>
-      <div className="stat-info">
-        <div className="stat-value">{value}</div>
-        <div className="stat-label">{label}</div>
-        {trend && <div className={`stat-trend stat-trend-${trend.type}`}><TrendingUp size={11} />{trend.text}</div>}
-      </div>
-    </div>
-  )
-}
-
-function rdvColor(type) {
-  const map = { 'Coloscopie': 'blue', 'Consultation': 'green', 'Suivi': 'warning', 'Gastroscopie': 'purple' }
-  return map[type] || 'blue'
-}
+const COLORS = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
 
 export default function Dashboard() {
+  const { patients, appointments, examens, rapports } = useApp()
+  const { currentUser } = useAuth()
   const navigate = useNavigate()
-  const todayRdv = rendezvous.slice(0, 4)
-  const recentExamens = examens.slice(0, 4)
+
+  const myPatients = patients.filter(p => p.doctorId === currentUser?.id)
+  const myExamens = examens.filter(e => e.doctorId === currentUser?.id)
+  const myAppointments = appointments.filter(a => a.doctorId === currentUser?.id)
+  const myRapports = rapports.filter(r => r.doctorId === currentUser?.id)
+
+  const today = new Date().toISOString().split('T')[0]
+  const todayRdv = myAppointments.filter(a => a.date === today)
+  const upcoming = [...myAppointments]
+    .sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time))
+    .filter(a => a.date >= today)
+    .slice(0, 4)
+  const recentExamens = [...myExamens].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 4)
+
+  const stats = [
+    { label: 'Mes patients', value: myPatients.length, icon: Users, color: 'blue', sub: 'enregistrés' },
+    { label: 'Examens', value: myExamens.length, icon: Microscope, color: 'purple', sub: 'réalisés' },
+    { label: 'Analyses IA', value: myExamens.filter(e => e.status === 'termine').length, icon: Brain, color: 'cyan', sub: 'complètes' },
+    { label: 'Prochains RDV', value: upcoming.length, icon: Calendar, color: 'green', sub: 'planifiés' },
+  ]
+
+  const statusConfig = {
+    en_analyse: { label: 'En analyse', cls: 'badge-warning' },
+    termine: { label: 'Terminé', cls: 'badge-success' },
+    en_attente: { label: 'En attente', cls: 'badge-blue' },
+  }
+
+  const rdvTypeColor = { Coloscopie: 'badge-blue', Consultation: 'badge-success', Suivi: 'badge-warning', Gastroscopie: 'badge-purple' }
 
   return (
     <div className="animate-in">
-      {/* Header */}
       <div className="page-header-row">
         <div className="page-header" style={{ marginBottom: 0 }}>
-          <h1>Bonjour, {doctor.name.split(' ')[1]} 👋</h1>
-          <p>Voici un aperçu de votre journée et de vos activités récentes.</p>
+          <h1>Bonjour, {currentUser?.name?.split(' ').slice(-1)[0]} 👋</h1>
+          <p>Voici un aperçu de votre activité médicale.</p>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/doctor/rendezvous')}>
-          <Calendar size={16} /> Prendre un rendez-vous
+          <Calendar size={16} /> Voir mes RDV
         </button>
       </div>
 
       {/* Stats */}
       <div className="stats-grid">
-        <StatCard value={stats.patientsAujourdhui} label="Patients aujourd'hui" icon={Users} colorClass="blue" trend={{ type: 'up', text: '+1 vs hier' }} />
-        <StatCard value={stats.examensEnCours} label="Examens en cours" icon={Microscope} colorClass="purple" />
-        <StatCard value={stats.analysesIA} label="Analyses IA réalisées" icon={Brain} colorClass="cyan" trend={{ type: 'up', text: 'Ce mois' }} />
-        <StatCard value={stats.rdvSemaine} label="Rendez-vous cette semaine" icon={Calendar} colorClass="green" />
+        {stats.map(s => (
+          <div key={s.label} className={`stat-card stat-card-${s.color}`}>
+            <div className={`stat-icon stat-icon-${s.color}`}><s.icon size={20} /></div>
+            <div className="stat-info">
+              <div className="stat-value">{s.value}</div>
+              <div className="stat-label">{s.label}</div>
+              <div className="stat-trend stat-trend-neutral"><TrendingUp size={11} />{s.sub}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Main grid */}
       <div className="section-grid-2" style={{ gap: '1.5rem' }}>
-        {/* Rendez-vous du jour */}
+        {/* Upcoming appointments */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>Rendez-vous à venir</h2>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>Prochains rendez-vous</h2>
             <button className="btn btn-ghost btn-sm" onClick={() => navigate('/doctor/rendezvous')}>
               Voir tout <ArrowRight size={14} />
             </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {todayRdv.map((rdv, i) => (
-              <div key={rdv.id} className="card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div className={`patient-avatar ${avatarColors[i % avatarColors.length]}`}>
-                  {rdv.patient.split(' ').map(w => w[0]).join('')}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-100)' }}>{rdv.patient}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-400)', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Clock size={11} /> {rdv.time} · {rdv.date}
+          {upcoming.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-400)' }}>
+              Aucun rendez-vous à venir
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {upcoming.map((rdv, i) => (
+                <div key={rdv.id} className="card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div className={`patient-avatar ${COLORS[i % COLORS.length]}`}>
+                    {rdv.patientName.split(' ').map(w => w[0]).join('')}
                   </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{rdv.patientName}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-400)', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <Clock size={11} /> {rdv.time} · {rdv.date}
+                    </div>
+                  </div>
+                  <span className={`badge ${rdvTypeColor[rdv.type] || 'badge-blue'}`}>
+                    <span className="badge-dot" /> {rdv.type}
+                  </span>
                 </div>
-                <span className={`badge badge-${rdvColor(rdv.type)}`}>
-                  <span className="badge-dot" /> {rdv.type}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Examens récents */}
+        {/* Recent examens */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>Examens récents</h2>
@@ -88,31 +107,28 @@ export default function Dashboard() {
               Voir tout <ArrowRight size={14} />
             </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {recentExamens.map((ex) => {
-              const statusMap = {
-                en_analyse: { label: 'En analyse', cls: 'badge-warning' },
-                termine: { label: 'Terminé', cls: 'badge-success' },
-                en_attente: { label: 'En attente', cls: 'badge-blue' },
-              }
-              const s = statusMap[ex.status]
-              return (
-                <div key={ex.id} className="card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}
-                  onClick={() => navigate('/doctor/examens')}>
-                  <div className="exam-thumb">
-                    <span className="exam-thumb-placeholder">🔬</span>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-100)' }}>{ex.type}</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-400)', marginTop: '0.15rem' }}>
-                      {ex.date} · {ex.patient}
+          {recentExamens.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-400)' }}>
+              Aucun examen enregistré
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {recentExamens.map(ex => {
+                const s = statusConfig[ex.status] || statusConfig.en_attente
+                return (
+                  <div key={ex.id} className="card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}
+                    onClick={() => navigate('/doctor/examens')}>
+                    <div className="exam-thumb"><span className="exam-thumb-placeholder">🔬</span></div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{ex.type}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-400)' }}>{ex.date} · {ex.patient}</div>
                     </div>
+                    <span className={`badge ${s.cls}`}><span className="badge-dot" />{s.label}</span>
                   </div>
-                  <span className={`badge ${s.cls}`}><span className="badge-dot" />{s.label}</span>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -122,8 +138,8 @@ export default function Dashboard() {
         <div className="section-grid-3">
           {[
             { label: 'Nouvelle analyse IA', desc: 'Importer et analyser une image', icon: Brain, color: 'cyan', path: '/doctor/analyse' },
-            { label: 'Dossier patient', desc: 'Consulter un dossier médical', icon: Users, color: 'blue', path: '/doctor/dossier' },
-            { label: 'Générer un rapport', desc: 'Créer un compte rendu', icon: Microscope, color: 'purple', path: '/doctor/comptes-rendus' },
+            { label: 'Dossier patient', desc: `${myPatients.length} patients enregistrés`, icon: Users, color: 'blue', path: '/doctor/dossier' },
+            { label: 'Générer un rapport', desc: `${myRapports.length} rapport${myRapports.length > 1 ? 's' : ''} rédigé${myRapports.length > 1 ? 's' : ''}`, icon: Microscope, color: 'purple', path: '/doctor/comptes-rendus' },
           ].map(({ label, desc, icon: Icon, color, path }) => (
             <div key={label} className="card" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1rem' }}
               onClick={() => navigate(path)}>
