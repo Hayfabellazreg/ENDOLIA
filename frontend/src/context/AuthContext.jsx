@@ -3,29 +3,57 @@ import { createContext, useContext, useState, useCallback } from 'react'
 const AuthContext = createContext(null)
 
 const USERS_KEY = 'endolia_users'
+const USERS_VERSION = 2
 
+// Default seed: admin + 1 linked pair (doctor ↔ secretary)
 export const DEFAULT_USERS = [
-  { id: 'USR-001', name: 'Mohammed Admin', email: 'admin@endolia.com', password: 'admin123', role: 'admin', createdAt: '2025-01-01' },
-  { id: 'USR-002', name: 'Dr. Sarah Benali', email: 'doctor@endolia.com', password: 'doctor123', role: 'doctor', specialty: 'Gastro-entérologue', createdAt: '2025-01-05' },
-  { id: 'USR-003', name: 'Nadia Khalil', email: 'secretaire@endolia.com', password: 'secretaire123', role: 'secretaire', createdAt: '2025-01-10' },
+  {
+    id: 'USR-001',
+    name: 'Mohammed Admin',
+    email: 'admin@endolia.com',
+    password: 'admin123',
+    role: 'admin',
+    createdAt: '2025-01-01',
+  },
+  {
+    id: 'USR-002',
+    name: 'Dr. Sarah Benali',
+    email: 'doctor@endolia.com',
+    password: 'doctor123',
+    role: 'doctor',
+    specialty: 'Gastro-entérologue',
+    linkedUserId: 'USR-003',   // linked secretary
+    createdAt: '2025-01-05',
+  },
+  {
+    id: 'USR-003',
+    name: 'Nadia Khalil',
+    email: 'secretaire@endolia.com',
+    password: 'secretaire123',
+    role: 'secretaire',
+    linkedUserId: 'USR-002',   // linked doctor
+    createdAt: '2025-01-10',
+  },
 ]
 
 export function getStoredUsers() {
   try {
-    const stored = localStorage.getItem(USERS_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      // Always ensure default users exist
-      const ids = parsed.map(u => u.id)
-      const missing = DEFAULT_USERS.filter(u => !ids.includes(u.id))
-      return [...parsed, ...missing]
+    const raw = localStorage.getItem(USERS_KEY)
+    if (raw) {
+      const { version, users } = JSON.parse(raw)
+      if (version >= USERS_VERSION) {
+        // Ensure default users always exist
+        const ids = users.map(u => u.id)
+        const missing = DEFAULT_USERS.filter(u => !ids.includes(u.id))
+        return [...users, ...missing]
+      }
     }
-  } catch (e) {}
+  } catch {}
   return [...DEFAULT_USERS]
 }
 
 export function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
+  localStorage.setItem(USERS_KEY, JSON.stringify({ version: USERS_VERSION, users }))
 }
 
 export function AuthProvider({ children }) {

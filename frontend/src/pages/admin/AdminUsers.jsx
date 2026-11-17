@@ -1,65 +1,121 @@
 import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
-import { UserPlus, Trash2, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { getStoredUsers, saveUsers } from '../../context/AuthContext'
+import { UserPlus, Trash2, Eye, EyeOff, AlertCircle, Link2 } from 'lucide-react'
 
-const ROLE_OPTIONS = [
-  { value: 'doctor', label: 'Médecin' },
-  { value: 'secretaire', label: 'Secrétaire médicale' },
-]
+function genId(prefix) {
+  return `${prefix}-${Date.now().toString(36).toUpperCase()}`
+}
 
-const COLORS = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
+const EMPTY = {
+  doctorName: '', doctorEmail: '', doctorPassword: '', doctorSpecialty: 'Gastro-entérologue',
+  secretaireName: '', secretaireEmail: '', secretairePassword: '',
+}
 
 export default function AdminUsers() {
-  const { getUsers, addUser, deleteUser } = useApp()
-  const [users, setUsers] = useState(() => getUsers().filter(u => u.role !== 'admin'))
+  const { patients } = useApp()
+  const [pairs, setPairs] = useState(() => buildPairs())
   const [showForm, setShowForm] = useState(false)
-  const [showPwd, setShowPwd] = useState(false)
-  const [filter, setFilter] = useState('tous')
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'doctor', specialty: '' })
+  const [form, setForm] = useState({ ...EMPTY })
+  const [showPwd, setShowPwd] = useState({ doc: false, sec: false })
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState('')
 
-  const refresh = () => setUsers(getUsers().filter(u => u.role !== 'admin'))
+  function buildPairs() {
+    const users = getStoredUsers()
+    const doctors = users.filter(u => u.role === 'doctor')
+    return doctors.map(doc => ({
+      doctor: doc,
+      secretary: users.find(u => u.id === doc.linkedUserId) || null,
+    }))
+  }
+
+  const refresh = () => setPairs(buildPairs())
 
   const validate = () => {
     const e = {}
-    if (!form.name.trim()) e.name = 'Le nom est requis'
-    if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Email invalide'
-    if (form.password.length < 6) e.password = 'Minimum 6 caractères'
-    if (users.find(u => u.email === form.email)) e.email = 'Cet email existe déjà'
+    const users = getStoredUsers()
+    if (!form.doctorName.trim()) e.doctorName = 'Requis'
+    if (!form.doctorEmail.trim() || !/\S+@\S+\.\S+/.test(form.doctorEmail)) e.doctorEmail = 'Email invalide'
+    if (form.doctorPassword.length < 6) e.doctorPassword = 'Min. 6 caractères'
+    if (!form.secretaireName.trim()) e.secretaireName = 'Requis'
+    if (!form.secretaireEmail.trim() || !/\S+@\S+\.\S+/.test(form.secretaireEmail)) e.secretaireEmail = 'Email invalide'
+    if (form.secretairePassword.length < 6) e.secretairePassword = 'Min. 6 caractères'
+    const emails = users.map(u => u.email)
+    if (emails.includes(form.doctorEmail)) e.doctorEmail = 'Email déjà utilisé'
+    if (emails.includes(form.secretaireEmail)) e.secretaireEmail = 'Email déjà utilisé'
     return e
   }
 
   const handleCreate = (e) => {
     e.preventDefault()
-    const e2 = validate()
-    if (Object.keys(e2).length) { setErrors(e2); return }
-    addUser(form)
-    setSuccess(`Compte "${form.name}" créé avec succès !`)
-    setForm({ name: '', email: '', password: '', role: 'doctor', specialty: '' })
+    const errs = validate()
+    if (Object.keys(errs).length) { setErrors(errs); return }
+
+    const docId = genId('USR')
+    const secId = genId('USR')
+    const today = new Date().toISOString().split('T')[0]
+
+    const newDoctor = {
+      id: docId, name: form.doctorName, email: form.doctorEmail, password: form.doctorPassword,
+      role: 'doctor', specialty: form.doctorSpecialty, linkedUserId: secId, createdAt: today,
+    }
+    const newSecretary = {
+      id: secId, name: form.secretaireName, email: form.secretaireEmail, password: form.secretairePassword,
+      role: 'secretaire', linkedUserId: docId, createdAt: today,
+    }
+
+    const users = getStoredUsers()
+    saveUsers([...users, newDoctor, newSecretary])
+    setSuccess(`Binôme créé : ${form.doctorName} ↔ ${form.secretaireName}`)
+    setForm({ ...EMPTY })
     setErrors({})
     setShowForm(false)
     refresh()
-    setTimeout(() => setSuccess(''), 4000)
+    setTimeout(() => setSuccess(''), 5000)
   }
 
-  const handleDelete = (id, name) => {
-    if (!window.confirm(`Supprimer le compte de ${name} ?`)) return
-    deleteUser(id)
+  const handleDeletePair = (doctor, secretary) => {
+    const names = secretary ? `${doctor.name} et ${secretary.name}` : doctor.name
+    if (!window.confirm(`Supprimer le binôme : ${names} ?`)) return
+    const idsToDelete = [doctor.id, secretary?.id].filter(Boolean)
+    const users = getStoredUsers().filter(u => !idsToDelete.includes(u.id))
+    saveUsers(users)
     refresh()
   }
 
-  const filtered = users.filter(u => filter === 'tous' || u.role === filter)
+  const F = ({ label, field, type = 'text', placeholder, error, pwdKey }) => (
+    <div className="form-group" style={{ marginBottom: '0.9rem' }}>
+      <label className="form-label">{label}</label>
+      <div style={{ position: 'relative' }}>
+        <input
+          className="form-input"
+          type={pwdKey && showPwd[pwdKey] ? 'text' : type}
+          placeholder={placeholder}
+          value={form[field]}
+          onChange={e => setForm({ ...form, [field]: e.target.value })}
+          style={pwdKey ? { paddingRight: '2.5rem' } : {}}
+        />
+        {pwdKey && (
+          <button type="button" onClick={() => setShowPwd(p => ({ ...p, [pwdKey]: !p[pwdKey] }))}
+            style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-400)', cursor: 'pointer', display: 'flex' }}>
+            {showPwd[pwdKey] ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        )}
+      </div>
+      {error && <div style={{ color: 'var(--danger)', fontSize: '0.73rem', marginTop: '0.25rem' }}>{error}</div>}
+    </div>
+  )
 
   return (
     <div className="animate-in">
       <div className="page-header-row">
         <div className="page-header" style={{ marginBottom: 0 }}>
-          <h1>Gestion des utilisateurs</h1>
-          <p>Créez et gérez les comptes médecins et secrétaires.</p>
+          <h1>Gestion des binômes</h1>
+          <p>Chaque médecin est associé à une secrétaire dédiée.</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowForm(v => !v)}>
-          <UserPlus size={16} /> Nouveau compte
+          <UserPlus size={16} /> Créer un binôme
         </button>
       </div>
 
@@ -72,113 +128,111 @@ export default function AdminUsers() {
       {/* Create form */}
       {showForm && (
         <div className="card animate-in" style={{ marginBottom: '2rem' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '1.5rem' }}>Créer un nouveau compte</h3>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Link2 size={16} color="var(--accent-light)" /> Nouveau binôme Médecin ↔ Secrétaire
+          </h3>
           <form onSubmit={handleCreate}>
-            <div className="section-grid-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Nom complet *</label>
-                <input className="form-input" placeholder="Dr. Prénom Nom" value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })} />
-                {errors.name && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '0.3rem' }}>{errors.name}</div>}
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Rôle *</label>
-                <select className="form-input" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-                  {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Adresse e-mail *</label>
-                <input className="form-input" type="email" placeholder="exemple@endolia.com" value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })} />
-                {errors.email && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '0.3rem' }}>{errors.email}</div>}
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Mot de passe *</label>
-                <div style={{ position: 'relative' }}>
-                  <input className="form-input" type={showPwd ? 'text' : 'password'} placeholder="Min. 6 caractères"
-                    value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                    style={{ paddingRight: '2.5rem' }} />
-                  <button type="button" onClick={() => setShowPwd(v => !v)}
-                    style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-400)', cursor: 'pointer' }}>
-                    {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
+            <div className="section-grid-2" style={{ gap: '2rem' }}>
+              {/* Doctor side */}
+              <div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span>🩺</span> Médecin
                 </div>
-                {errors.password && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '0.3rem' }}>{errors.password}</div>}
+                <F label="Nom complet *" field="doctorName" placeholder="Dr. Prénom Nom" error={errors.doctorName} />
+                <F label="Spécialité" field="doctorSpecialty" placeholder="ex: Gastro-entérologue" />
+                <F label="Email *" field="doctorEmail" type="email" placeholder="medecin@endolia.com" error={errors.doctorEmail} />
+                <F label="Mot de passe *" field="doctorPassword" type="password" placeholder="Min. 6 caractères" error={errors.doctorPassword} pwdKey="doc" />
               </div>
-              {form.role === 'doctor' && (
-                <div className="form-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
-                  <label className="form-label">Spécialité</label>
-                  <input className="form-input" placeholder="ex: Gastro-entérologue" value={form.specialty}
-                    onChange={e => setForm({ ...form, specialty: e.target.value })} />
+
+              {/* Secretary side */}
+              <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '2rem' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--purple)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span>👩‍💼</span> Secrétaire
                 </div>
-              )}
+                <F label="Nom complet *" field="secretaireName" placeholder="Prénom Nom" error={errors.secretaireName} />
+                <F label="Email *" field="secretaireEmail" type="email" placeholder="secretaire@endolia.com" error={errors.secretaireEmail} />
+                <F label="Mot de passe *" field="secretairePassword" type="password" placeholder="Min. 6 caractères" error={errors.secretairePassword} pwdKey="sec" />
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1.25rem', marginTop: '1rem' }}>
               <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setErrors({}) }}>Annuler</button>
-              <button type="submit" className="btn btn-primary"><UserPlus size={15} /> Créer le compte</button>
+              <button type="submit" className="btn btn-primary"><Link2 size={15} /> Créer le binôme</button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Filter */}
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', alignItems: 'center' }}>
-        <div className="filter-tabs">
-          {[{ key: 'tous', label: 'Tous' }, { key: 'doctor', label: 'Médecins' }, { key: 'secretaire', label: 'Secrétaires' }].map(f => (
-            <button key={f.key} className={`filter-tab ${filter === f.key ? 'active' : ''}`} onClick={() => setFilter(f.key)}>{f.label}</button>
-          ))}
-        </div>
-        <span className="table-count">{filtered.length} compte{filtered.length > 1 ? 's' : ''}</span>
-      </div>
-
-      {/* Table */}
-      <div className="table-container">
-        <table>
-          <thead>
-            <tr><th>Utilisateur</th><th>Rôle</th><th>Spécialité</th><th>Créé le</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-400)' }}>Aucun compte trouvé</td></tr>
-            ) : filtered.map((u, i) => (
-              <tr key={u.id}>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div className={`patient-avatar ${COLORS[i % COLORS.length]}`}>
-                      {u.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2)}
-                    </div>
-                    <div>
-                      <div className="td-primary">{u.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-500)' }}>{u.email}</div>
-                    </div>
+      {/* Pairs list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {pairs.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon"><UserPlus size={24} /></div>
+            <div className="empty-title">Aucun binôme créé</div>
+            <div className="empty-desc">Créez votre premier binôme médecin ↔ secrétaire.</div>
+          </div>
+        ) : pairs.map(({ doctor, secretary }, i) => {
+          const patientsCount = patients.filter(p => p.doctorId === doctor.id).length
+          return (
+            <div key={doctor.id} className="card" style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                {/* Doctor card */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1 }}>
+                  <div className="patient-avatar avatar-blue" style={{ width: 46, height: 46, fontSize: '1rem' }}>
+                    {doctor.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2)}
                   </div>
-                </td>
-                <td>
-                  <span className={`badge ${u.role === 'doctor' ? 'badge-blue' : 'badge-purple'}`}>
-                    <span className="badge-dot" />{u.role === 'doctor' ? 'Médecin' : 'Secrétaire'}
-                  </span>
-                </td>
-                <td style={{ color: 'var(--text-300)', fontSize: '0.875rem' }}>{u.specialty || '—'}</td>
-                <td style={{ color: 'var(--text-400)', fontSize: '0.8rem' }}>{u.createdAt}</td>
-                <td>
-                  <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u.id, u.name)}>
-                    <Trash2 size={13} /> Supprimer
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <div>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.15rem' }}>Médecin</div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-100)', fontSize: '0.95rem' }}>{doctor.name}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-400)' }}>{doctor.specialty}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-500)', marginTop: '0.15rem' }}>{doctor.email}</div>
+                  </div>
+                </div>
+
+                {/* Link icon */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+                  <Link2 size={20} color="var(--border-hover)" />
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-500)', fontWeight: 600 }}>{patientsCount} patient{patientsCount > 1 ? 's' : ''}</div>
+                </div>
+
+                {/* Secretary card */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1 }}>
+                  <div className="patient-avatar avatar-violet" style={{ width: 46, height: 46, fontSize: '1rem' }}>
+                    {secretary
+                      ? secretary.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2)
+                      : '—'}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--purple)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.15rem' }}>Secrétaire</div>
+                    {secretary ? (
+                      <>
+                        <div style={{ fontWeight: 600, color: 'var(--text-100)', fontSize: '0.95rem' }}>{secretary.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-500)', marginTop: '0.15rem' }}>{secretary.email}</div>
+                      </>
+                    ) : (
+                      <div style={{ color: 'var(--text-500)', fontSize: '0.85rem' }}>Aucune secrétaire liée</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <button className="btn btn-danger btn-sm" onClick={() => handleDeletePair(doctor, secretary)}>
+                  <Trash2 size={13} /> Supprimer le binôme
+                </button>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* Info box */}
+      {/* Info */}
       <div className="card" style={{ marginTop: '1.5rem', background: 'var(--accent-soft)', borderColor: 'var(--border-accent)' }}>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           <AlertCircle size={16} color="var(--accent-light)" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-300)', lineHeight: 1.6 }}>
-            <strong style={{ color: 'var(--accent-light)' }}>Accès immédiat.</strong> Les comptes créés ici peuvent se connecter immédiatement avec leur email et mot de passe.
-            Le rôle détermine l'interface affichée : Médecin pour les examens et analyses IA, Secrétaire pour la gestion des patients et RDV.
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-300)', lineHeight: 1.7 }}>
+            <strong style={{ color: 'var(--accent-light)' }}>Logique du système :</strong> Chaque secrétaire est liée à un médecin.
+            Les patients et rendez-vous créés par la secrétaire sont automatiquement attribués à son médecin.
+            La secrétaire n'a pas à choisir le médecin à chaque création.
           </div>
         </div>
       </div>

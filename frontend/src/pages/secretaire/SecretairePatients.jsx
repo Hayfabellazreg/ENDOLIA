@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { getStoredUsers } from '../../context/AuthContext'
 import { UserPlus, Search, Trash2, Edit, X, Check } from 'lucide-react'
 
 const COLORS = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
@@ -11,23 +12,28 @@ function calcAge(dob) {
   if (!dob) return ''
   const [d, m, y] = dob.split('/')
   if (!y) return ''
-  const diff = Date.now() - new Date(`${y}-${m}-${d}`).getTime()
-  return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25))
+  return Math.floor((Date.now() - new Date(`${y}-${m}-${d}`).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
 }
 
 export default function SecretairePatients() {
-  const { patients, addPatient, updatePatient, deletePatient, getUsers } = useApp()
+  const { patients, addPatient, updatePatient, deletePatient } = useApp()
   const { currentUser } = useAuth()
-  const doctors = getUsers().filter(u => u.role === 'doctor')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('tous')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ ...EMPTY_FORM, doctorId: doctors[0]?.id || '' })
+  const [form, setForm] = useState({ ...EMPTY_FORM })
   const [editId, setEditId] = useState(null)
   const [success, setSuccess] = useState('')
 
-  const filtered = patients.filter(p => {
-    const ms = p.name.toLowerCase().includes(search.toLowerCase()) || p.email?.toLowerCase().includes(search.toLowerCase()) || p.phone?.includes(search)
+  // Find linked doctor automatically
+  const users = getStoredUsers()
+  const linkedDoctor = users.find(u => u.id === currentUser?.linkedUserId)
+
+  // Show only patients of the linked doctor
+  const myPatients = patients.filter(p => p.doctorId === linkedDoctor?.id)
+  const filtered = myPatients.filter(p => {
+    const ms = p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.email?.toLowerCase().includes(search.toLowerCase()) || p.phone?.includes(search)
     const mf = filter === 'tous' || p.status === filter
     return ms && mf
   })
@@ -36,21 +42,22 @@ export default function SecretairePatients() {
     e.preventDefault()
     if (!form.name.trim()) return
     const age = calcAge(form.dob)
+    // doctorId is automatically set to the linked doctor
     if (editId) {
       updatePatient(editId, { ...form, age })
       setSuccess('Patient modifié avec succès !')
       setEditId(null)
     } else {
-      addPatient({ ...form, age })
+      addPatient({ ...form, age, doctorId: linkedDoctor?.id || '' })
       setSuccess('Patient créé avec succès !')
     }
-    setForm({ ...EMPTY_FORM, doctorId: doctors[0]?.id || '' })
+    setForm({ ...EMPTY_FORM })
     setShowForm(false)
     setTimeout(() => setSuccess(''), 4000)
   }
 
   const startEdit = (p) => {
-    setForm({ name: p.name, dob: p.dob, phone: p.phone, email: p.email, address: p.address, status: p.status, antecedents: p.antecedents, allergies: p.allergies, doctorId: p.doctorId || '' })
+    setForm({ name: p.name, dob: p.dob, phone: p.phone, email: p.email, address: p.address, status: p.status, antecedents: p.antecedents, allergies: p.allergies })
     setEditId(p.id)
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -61,14 +68,17 @@ export default function SecretairePatients() {
     deletePatient(id)
   }
 
-  const cancelForm = () => { setShowForm(false); setEditId(null); setForm({ ...EMPTY_FORM, doctorId: doctors[0]?.id || '' }) }
+  const cancelForm = () => { setShowForm(false); setEditId(null); setForm({ ...EMPTY_FORM }) }
 
   return (
     <div className="animate-in">
       <div className="page-header-row">
         <div className="page-header" style={{ marginBottom: 0 }}>
           <h1>Patients</h1>
-          <p>Créez et gérez les dossiers patients.</p>
+          <p>
+            Patients de <strong style={{ color: 'var(--accent-light)' }}>{linkedDoctor?.name || '—'}</strong>
+            {linkedDoctor?.specialty ? ` · ${linkedDoctor.specialty}` : ''}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => { cancelForm(); setShowForm(v => !v) }}>
           <UserPlus size={16} /> Nouveau patient
@@ -84,8 +94,13 @@ export default function SecretairePatients() {
       {/* Create / Edit form */}
       {showForm && (
         <div className="card animate-in" style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>{editId ? 'Modifier le patient' : 'Nouveau patient'}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>{editId ? 'Modifier le patient' : 'Nouveau patient'}</h3>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-400)', marginTop: '0.2rem' }}>
+                Sera automatiquement assigné à <strong style={{ color: 'var(--accent-light)' }}>{linkedDoctor?.name}</strong>
+              </div>
+            </div>
             <button className="btn btn-ghost btn-sm" onClick={cancelForm}><X size={15} /></button>
           </div>
           <form onSubmit={handleSubmit}>
@@ -109,12 +124,6 @@ export default function SecretairePatients() {
                   <option value="nouveau">Nouveau</option>
                   <option value="actif">Actif</option>
                   <option value="en_cours">En cours</option>
-                </select>
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Médecin traitant</label>
-                <select className="form-input" value={form.doctorId} onChange={e => setForm({ ...form, doctorId: e.target.value })}>
-                  {doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -152,7 +161,7 @@ export default function SecretairePatients() {
       {/* Table */}
       <div className="table-container">
         <div className="table-header">
-          <span className="table-title">Liste des patients</span>
+          <span className="table-title">Patients de {linkedDoctor?.name || '—'}</span>
           <span className="table-count">{filtered.length} patient{filtered.length > 1 ? 's' : ''}</span>
         </div>
         <table>
@@ -160,7 +169,7 @@ export default function SecretairePatients() {
           <tbody>
             {filtered.length === 0 ? (
               <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-400)' }}>
-                {search ? 'Aucun résultat pour cette recherche' : 'Aucun patient enregistré'}
+                {myPatients.length === 0 ? 'Aucun patient enregistré. Créez le premier patient.' : 'Aucun résultat.'}
               </td></tr>
             ) : filtered.map((p, i) => {
               const s = STATUS[p.status] || STATUS.nouveau
@@ -187,7 +196,7 @@ export default function SecretairePatients() {
                   <td><span className={`badge ${s.cls}`}><span className="badge-dot" />{s.label}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => startEdit(p)}><Edit size={13} /> Modifier</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => startEdit(p)}><Edit size={13} /></button>
                       <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id, p.name)}><Trash2 size={13} /></button>
                     </div>
                   </td>
