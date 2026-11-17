@@ -6,8 +6,6 @@ const NAV = {
   admin: [
     { label: 'Tableau de bord', icon: '📊', to: '/admin/dashboard' },
     { label: 'Utilisateurs', icon: '👥', to: '/admin/users' },
-    { label: 'Patients', icon: '🧑‍⚕️', to: '/admin/patients' },
-    { label: 'Statistiques', icon: '📈', to: '/admin/stats' },
   ],
   doctor: [
     { label: 'Tableau de bord', icon: '🏠', to: '/doctor/dashboard' },

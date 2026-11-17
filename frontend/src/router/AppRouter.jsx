@@ -63,8 +63,6 @@ export default function AppRouter() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
-          <Route path="patients" element={<Patients />} />
-          <Route path="stats" element={<AdminDashboard />} />
         </Route>
 
         {/* ── Secrétaire ──────────────────────────────────── */}

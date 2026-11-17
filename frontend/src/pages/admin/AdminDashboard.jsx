@@ -1,7 +1,9 @@
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserCheck, Microscope, Calendar, ArrowRight, TrendingUp, Shield, UserPlus } from 'lucide-react'
+import { Users, UserCheck, Microscope, Calendar, ArrowRight, TrendingUp, UserPlus } from 'lucide-react'
+
+const COLORS = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
 
 export default function AdminDashboard() {
   const { patients, appointments, examens, rapports, getUsers } = useApp()
@@ -12,8 +14,10 @@ export default function AdminDashboard() {
   const secretaires = users.filter(u => u.role === 'secretaire')
   const thisMonth = new Date().getMonth()
   const rdvThisMonth = appointments.filter(a => new Date(a.date).getMonth() === thisMonth).length
-  const recentPatients = [...patients].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5)
-  const recentUsers = [...users].filter(u => u.role !== 'admin').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4)
+  const recentUsers = [...users]
+    .filter(u => u.role !== 'admin')
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 6)
 
   const stats = [
     { label: 'Médecins', value: doctors.length, icon: UserCheck, color: 'blue', sub: 'comptes actifs' },
@@ -48,104 +52,66 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="section-grid-2">
-        {/* Recent users */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>Comptes récents</h2>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin/users')}>
-              Gérer <ArrowRight size={14} />
-            </button>
-          </div>
-          <div className="table-container">
-            <table>
-              <thead><tr><th>Nom</th><th>Rôle</th><th>Créé le</th></tr></thead>
-              <tbody>
-                {recentUsers.map((u, i) => {
-                  const colors = ['avatar-blue', 'avatar-violet', 'avatar-teal', 'avatar-rose']
-                  return (
-                    <tr key={u.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                          <div className={`patient-avatar ${colors[i % colors.length]}`} style={{ width: 32, height: 32, fontSize: '0.75rem' }}>
-                            {u.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
-                          </div>
-                          <div>
-                            <div className="td-primary">{u.name}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-500)' }}>{u.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`badge ${u.role === 'doctor' ? 'badge-blue' : 'badge-purple'}`}>
-                          <span className="badge-dot" />
-                          {u.role === 'doctor' ? 'Médecin' : 'Secrétaire'}
-                        </span>
-                      </td>
-                      <td style={{ color: 'var(--text-400)', fontSize: '0.8rem' }}>{u.createdAt}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+      {/* Recent users table */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>Comptes du personnel</h2>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin/users')}>
+            Gérer <ArrowRight size={14} />
+          </button>
         </div>
-
-        {/* Recent patients */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 600 }}>Patients récents</h2>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin/patients')}>
-              Voir tout <ArrowRight size={14} />
-            </button>
-          </div>
-          <div className="table-container">
-            <table>
-              <thead><tr><th>Patient</th><th>Statut</th><th>Enregistré</th></tr></thead>
-              <tbody>
-                {recentPatients.map((p, i) => {
-                  const colors = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
-                  const sc = { actif: 'badge-success', en_cours: 'badge-warning', nouveau: 'badge-blue' }
-                  const sl = { actif: 'Actif', en_cours: 'En cours', nouveau: 'Nouveau' }
-                  return (
-                    <tr key={p.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                          <div className={`patient-avatar ${colors[i % colors.length]}`} style={{ width: 32, height: 32, fontSize: '0.75rem' }}>
-                            {p.name.split(' ').map(w => w[0]).join('')}
-                          </div>
-                          <span className="td-primary">{p.name}</span>
-                        </div>
-                      </td>
-                      <td><span className={`badge ${sc[p.status]}`}><span className="badge-dot" />{sl[p.status]}</span></td>
-                      <td style={{ color: 'var(--text-400)', fontSize: '0.8rem' }}>{p.createdAt}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Spécialité</th><th>Créé le</th></tr>
+            </thead>
+            <tbody>
+              {recentUsers.length === 0 ? (
+                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-400)' }}>
+                  Aucun compte créé. <button className="btn btn-primary btn-sm" style={{ marginLeft: '0.75rem' }} onClick={() => navigate('/admin/users')}>Créer maintenant</button>
+                </td></tr>
+              ) : recentUsers.map((u, i) => (
+                <tr key={u.id}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <div className={`patient-avatar ${COLORS[i % COLORS.length]}`} style={{ width: 32, height: 32, fontSize: '0.75rem' }}>
+                        {u.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <span className="td-primary">{u.name}</span>
+                    </div>
+                  </td>
+                  <td style={{ color: 'var(--text-400)', fontSize: '0.82rem' }}>{u.email}</td>
+                  <td>
+                    <span className={`badge ${u.role === 'doctor' ? 'badge-blue' : 'badge-purple'}`}>
+                      <span className="badge-dot" />
+                      {u.role === 'doctor' ? 'Médecin' : 'Secrétaire'}
+                    </span>
+                  </td>
+                  <td style={{ color: 'var(--text-300)', fontSize: '0.82rem' }}>{u.specialty || '—'}</td>
+                  <td style={{ color: 'var(--text-500)', fontSize: '0.78rem' }}>{u.createdAt}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* System summary */}
-      <div style={{ marginTop: '1.5rem' }}>
-        <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Résumé du système</h2>
-        <div className="section-grid-3">
-          {[
-            { label: 'Examens réalisés', value: examens.length, icon: '🔬', color: 'var(--accent)' },
-            { label: 'Comptes rendus', value: rapports.length, icon: '📄', color: 'var(--success)' },
-            { label: 'RDV planifiés', value: appointments.filter(a => a.status === 'confirme').length, icon: '📅', color: 'var(--purple)' },
-          ].map(s => (
-            <div key={s.label} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ fontSize: '1.75rem' }}>{s.icon}</div>
-              <div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: s.color }}>{s.value}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-400)' }}>{s.label}</div>
-              </div>
+      <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Résumé du système</h2>
+      <div className="section-grid-3">
+        {[
+          { label: 'Examens réalisés', value: examens.length, icon: '🔬', color: 'var(--accent-light)' },
+          { label: 'Comptes rendus', value: rapports.length, icon: '📄', color: 'var(--success)' },
+          { label: 'RDV planifiés', value: appointments.filter(a => a.status === 'confirme').length, icon: '📅', color: 'var(--purple)' },
+        ].map(s => (
+          <div key={s.label} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ fontSize: '1.75rem' }}>{s.icon}</div>
+            <div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-400)' }}>{s.label}</div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   )
