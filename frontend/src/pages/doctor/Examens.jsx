@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
-import { Upload, Search, Brain, Clock, Plus } from 'lucide-react'
+import { Upload, Search, Brain, Clock, Plus, Microscope } from 'lucide-react'
 
 const STATUS_CFG = {
   en_analyse: { label: 'En analyse', cls: 'badge-warning' },
@@ -155,7 +155,7 @@ export default function Examens() {
                 <tr key={ex.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      <div className="exam-thumb"><span className="exam-thumb-placeholder">🔬</span></div>
+                      <div className="exam-thumb"><Microscope size={18} color="var(--accent-light)" /></div>
                       <div>
                         <div className="td-primary">{ex.type}</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-500)' }}>{ex.id}</div>

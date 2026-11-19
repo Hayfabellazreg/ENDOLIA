@@ -6,7 +6,7 @@ function StatusBadge({ status }) {
   const isOk = status === 'ok'
   return (
     <span className={`badge ${isOk ? 'badge-ok' : 'badge-error'}`}>
-      {isOk ? '✅ Connecté' : '❌ Erreur'}
+      {isOk ? 'Connecté' : 'Erreur'}
     </span>
   )
 }
@@ -71,21 +71,21 @@ function App() {
           ) : (
             <div className="status-grid">
               <div className="status-card">
-                <div className="status-icon">🐍</div>
+                <div className="status-icon" style={{ fontWeight: 700, fontSize: '0.9rem', color: '#38bdf8' }}>API</div>
                 <div className="status-info">
                   <h3>Flask API</h3>
                   <StatusBadge status={health?.api === 'running' ? 'ok' : 'error'} />
                 </div>
               </div>
               <div className="status-card">
-                <div className="status-icon">🐘</div>
+                <div className="status-icon" style={{ fontWeight: 700, fontSize: '0.9rem', color: '#60a5fa' }}>DB</div>
                 <div className="status-info">
                   <h3>PostgreSQL</h3>
                   <StatusBadge status={health?.database === 'connected' ? 'ok' : 'error'} />
                 </div>
               </div>
               <div className="status-card">
-                <div className="status-icon">⚛️</div>
+                <div className="status-icon" style={{ fontWeight: 700, fontSize: '0.9rem', color: '#a78bfa' }}>UI</div>
                 <div className="status-info">
                   <h3>React App</h3>
                   <StatusBadge status="ok" />
@@ -101,7 +101,6 @@ function App() {
           <h2 className="section-title">Utilisateurs ({users.length})</h2>
           {users.length === 0 ? (
             <div className="empty-state">
-              <span className="empty-icon">👤</span>
               <p>Aucun utilisateur pour l'instant. Créez-en un ci-dessus !</p>
             </div>
           ) : (

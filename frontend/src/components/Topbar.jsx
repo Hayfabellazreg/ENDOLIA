@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Search, Bell, Settings, X } from 'lucide-react'
+import { Search, Bell, Settings, X, Calendar } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { useNavigate } from 'react-router-dom'
@@ -109,7 +109,9 @@ export default function AppTopbar() {
                         style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', cursor: 'pointer', transition: 'var(--transition)' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-glass)'}
                         onMouseLeave={e => e.currentTarget.style.background = ''}>
-                        <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--purple-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>📅</div>
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--purple-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Calendar size={16} color="var(--purple-light, #a855f7)" />
+                        </div>
                         <div>
                           <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-100)' }}>{a.patientName}</div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-400)' }}>{a.type} · {a.date} {a.time}</div>

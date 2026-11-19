@@ -1,7 +1,7 @@
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserCheck, Microscope, Calendar, ArrowRight, TrendingUp, UserPlus } from 'lucide-react'
+import { Users, UserCheck, Microscope, Calendar, ArrowRight, TrendingUp, UserPlus, FileText } from 'lucide-react'
 
 const COLORS = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
 
@@ -30,7 +30,7 @@ export default function AdminDashboard() {
     <div className="animate-in">
       <div className="page-header-row">
         <div className="page-header" style={{ marginBottom: 0 }}>
-          <h1>Tableau de bord Admin 🛡️</h1>
+          <h1>Tableau de bord Admin</h1>
           <p>Vue d'ensemble du système ENDOLIA.</p>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/admin/users')}>
@@ -100,18 +100,23 @@ export default function AdminDashboard() {
       <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Résumé du système</h2>
       <div className="section-grid-3">
         {[
-          { label: 'Examens réalisés', value: examens.length, icon: '🔬', color: 'var(--accent-light)' },
-          { label: 'Comptes rendus', value: rapports.length, icon: '📄', color: 'var(--success)' },
-          { label: 'RDV planifiés', value: appointments.filter(a => a.status === 'confirme').length, icon: '📅', color: 'var(--purple)' },
-        ].map(s => (
-          <div key={s.label} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ fontSize: '1.75rem' }}>{s.icon}</div>
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-400)' }}>{s.label}</div>
+          { label: 'Examens réalisés', value: examens.length, icon: Microscope, color: 'var(--accent-light)' },
+          { label: 'Comptes rendus', value: rapports.length, icon: FileText, color: 'var(--success)' },
+          { label: 'RDV planifiés', value: appointments.filter(a => a.status === 'confirme').length, icon: Calendar, color: 'var(--purple)' },
+        ].map(s => {
+          const Icon = s.icon
+          return (
+            <div key={s.label} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 10, background: 'var(--bg-glass)' }}>
+                <Icon size={24} color={s.color} />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-400)' }}>{s.label}</div>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

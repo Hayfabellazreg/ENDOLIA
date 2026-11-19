@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { getStoredUsers, saveUsers } from '../../context/AuthContext'
-import { UserPlus, Trash2, Eye, EyeOff, AlertCircle, Link2 } from 'lucide-react'
+import { UserPlus, Trash2, Eye, EyeOff, AlertCircle, Link2, Stethoscope, User } from 'lucide-react'
 
 function genId(prefix) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}`
@@ -136,7 +136,7 @@ export default function AdminUsers() {
               {/* Doctor side */}
               <div>
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span>🩺</span> Médecin
+                  <Stethoscope size={14} color="var(--accent-light)" /> Médecin
                 </div>
                 <F label="Nom complet *" field="doctorName" placeholder="Dr. Prénom Nom" error={errors.doctorName} />
                 <F label="Spécialité" field="doctorSpecialty" placeholder="ex: Gastro-entérologue" />
@@ -147,7 +147,7 @@ export default function AdminUsers() {
               {/* Secretary side */}
               <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '2rem' }}>
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--purple)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span>👩‍💼</span> Secrétaire
+                  <User size={14} color="var(--purple)" /> Secrétaire
                 </div>
                 <F label="Nom complet *" field="secretaireName" placeholder="Prénom Nom" error={errors.secretaireName} />
                 <F label="Email *" field="secretaireEmail" type="email" placeholder="secretaire@endolia.com" error={errors.secretaireEmail} />
