@@ -42,7 +42,7 @@ export default function Dashboard() {
     <div className="animate-in">
       <div className="page-header-row">
         <div className="page-header" style={{ marginBottom: 0 }}>
-          <h1>Bonjour, {currentUser?.name?.split(' ').slice(-1)[0]} 👋</h1>
+          <h1>Bonjour, {currentUser?.name?.split(' ').slice(-1)[0]}</h1>
           <p>Voici un aperçu de votre activité médicale.</p>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/doctor/rendezvous')}>
@@ -118,7 +118,7 @@ export default function Dashboard() {
                 return (
                   <div key={ex.id} className="card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}
                     onClick={() => navigate('/doctor/examens')}>
-                    <div className="exam-thumb"><span className="exam-thumb-placeholder">🔬</span></div>
+                    <div className="exam-thumb"><Microscope size={18} color="var(--accent-light)" /></div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{ex.type}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-400)' }}>{ex.date} · {ex.patient}</div>

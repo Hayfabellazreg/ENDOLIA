@@ -38,7 +38,7 @@ export default function SecretaireDashboard() {
     <div className="animate-in">
       <div className="page-header-row">
         <div className="page-header" style={{ marginBottom: 0 }}>
-          <h1>Tableau de bord 👩‍💼</h1>
+          <h1>Tableau de bord</h1>
           <p>Secrétaire de <strong style={{ color: 'var(--accent-light)' }}>{linkedDoctor?.name || '—'}</strong></p>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/secretaire/patients')}>

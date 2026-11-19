@@ -114,7 +114,7 @@ export default function DossierPatient() {
                 const s = STATUS_CFG[ex.status] || STATUS_CFG.en_attente
                 return (
                   <div key={ex.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }} onClick={() => navigate('/doctor/examens')}>
-                    <div className="exam-thumb"><span className="exam-thumb-placeholder">🔬</span></div>
+                    <div className="exam-thumb"><Microscope size={18} color="var(--accent-light)" /></div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600 }}>{ex.type}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-400)' }}>{ex.date} · {ex.time} · {ex.id}</div>

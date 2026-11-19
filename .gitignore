@@ -5,6 +5,8 @@ backend/app/__pycache__/
 backend/**/__pycache__/
 backend/*.pyc
 backend/.env
+backend/instance/
+instance/
 *.pyc
 *.pyo
 *.pyd

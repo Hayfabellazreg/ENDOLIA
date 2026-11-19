@@ -57,7 +57,7 @@ export default function Login() {
 
       <div className="login-right">
         <div className="login-form-card animate-in">
-          <h2 className="login-form-title">Bienvenue 👋</h2>
+          <h2 className="login-form-title">Bienvenue</h2>
           <p className="login-form-sub">Connectez-vous à votre espace médical</p>
 
           <form onSubmit={handleSubmit}>
