@@ -1,19 +1,17 @@
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserCheck, Microscope, Calendar, ArrowRight, TrendingUp, UserPlus } from 'lucide-react'
+import { Users, UserCheck, ArrowRight, TrendingUp, UserPlus } from 'lucide-react'
 
 const COLORS = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
 
 export default function AdminDashboard() {
-  const { patients, appointments, examens, rapports, getUsers } = useApp()
+  const { getUsers } = useApp()
   const { currentUser } = useAuth()
   const navigate = useNavigate()
   const users = getUsers()
   const doctors = users.filter(u => u.role === 'doctor')
   const secretaires = users.filter(u => u.role === 'secretaire')
-  const thisMonth = new Date().getMonth()
-  const rdvThisMonth = appointments.filter(a => new Date(a.date).getMonth() === thisMonth).length
   const recentUsers = [...users]
     .filter(u => u.role !== 'admin')
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -22,8 +20,6 @@ export default function AdminDashboard() {
   const stats = [
     { label: 'Médecins', value: doctors.length, icon: UserCheck, color: 'blue', sub: 'comptes actifs' },
     { label: 'Secrétaires', value: secretaires.length, icon: Users, color: 'purple', sub: 'comptes actifs' },
-    { label: 'Patients', value: patients.length, icon: Users, color: 'cyan', sub: 'enregistrés' },
-    { label: 'RDV ce mois', value: rdvThisMonth, icon: Calendar, color: 'green', sub: 'rendez-vous' },
   ]
 
   return (
@@ -96,23 +92,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* System summary */}
-      <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Résumé du système</h2>
-      <div className="section-grid-3">
-        {[
-          { label: 'Examens réalisés', value: examens.length, icon: '🔬', color: 'var(--accent-light)' },
-          { label: 'Comptes rendus', value: rapports.length, icon: '📄', color: 'var(--success)' },
-          { label: 'RDV planifiés', value: appointments.filter(a => a.status === 'confirme').length, icon: '📅', color: 'var(--purple)' },
-        ].map(s => (
-          <div key={s.label} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ fontSize: '1.75rem' }}>{s.icon}</div>
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-400)' }}>{s.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+
     </div>
   )
 }

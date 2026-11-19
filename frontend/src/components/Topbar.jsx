@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { Search, Bell, Settings, X } from 'lucide-react'
+import { Search, Bell, Settings, X, Sun, Moon } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { useNavigate } from 'react-router-dom'
@@ -8,8 +9,9 @@ const ROLE_LABEL = { admin: 'Administrateur', doctor: null, secretaire: 'Secrét
 
 export default function AppTopbar() {
   const { currentUser } = useAuth()
-  const { patients, appointments } = useApp()
+  const { patients, appointments, getUsers } = useApp()
   const navigate = useNavigate()
+  const { theme, toggle } = useTheme()
   const [query, setQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
   const ref = useRef(null)
@@ -21,13 +23,22 @@ export default function AppTopbar() {
 
   // Search results
   const q = query.trim().toLowerCase()
-  const matchPatients = q.length >= 2
+  const isAdmin = currentUser?.role === 'admin'
+
+  // Admin searches among staff users
+  const allUsers = isAdmin ? getUsers().filter(u => u.role !== 'admin') : []
+  const matchUsers = isAdmin && q.length >= 2
+    ? allUsers.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.specialty?.toLowerCase().includes(q)).slice(0, 5)
+    : []
+
+  // Doctor/Secretary search patients & appointments
+  const matchPatients = !isAdmin && q.length >= 2
     ? patients.filter(p => p.name.toLowerCase().includes(q) || p.phone?.includes(q) || p.email?.toLowerCase().includes(q)).slice(0, 4)
     : []
-  const matchRdv = q.length >= 2
+  const matchRdv = !isAdmin && q.length >= 2
     ? appointments.filter(a => a.patientName?.toLowerCase().includes(q) || a.type?.toLowerCase().includes(q)).slice(0, 3)
     : []
-  const hasResults = matchPatients.length > 0 || matchRdv.length > 0
+  const hasResults = matchPatients.length > 0 || matchRdv.length > 0 || matchUsers.length > 0
 
   // Close on outside click
   useEffect(() => {
@@ -40,6 +51,11 @@ export default function AppTopbar() {
     const role = currentUser?.role
     if (role === 'doctor') navigate(`/doctor/dossier/${p.id}`)
     else if (role === 'secretaire') navigate('/secretaire/patients')
+    setQuery(''); setShowResults(false)
+  }
+
+  const goToUser = () => {
+    navigate('/admin/users')
     setQuery(''); setShowResults(false)
   }
 
@@ -77,6 +93,31 @@ export default function AppTopbar() {
               </div>
             ) : (
               <>
+                {/* Admin: staff users results */}
+                {matchUsers.length > 0 && (
+                  <div>
+                    <div style={{ padding: '0.5rem 1rem', fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-500)', textTransform: 'uppercase', letterSpacing: '0.08em', background: 'rgba(0,0,0,0.15)' }}>
+                      Personnel
+                    </div>
+                    {matchUsers.map(u => (
+                      <div key={u.id} onClick={goToUser}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', cursor: 'pointer', transition: 'var(--transition)', borderBottom: '1px solid var(--border)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-glass)'}
+                        onMouseLeave={e => e.currentTarget.style.background = ''}>
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: u.role === 'doctor' ? 'var(--accent-soft)' : 'var(--purple-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: u.role === 'doctor' ? 'var(--accent-light)' : 'var(--purple)', flexShrink: 0 }}>
+                          {u.name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-100)' }}>{u.name}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-400)' }}>
+                            {u.role === 'doctor' ? '🩺 Médecin' : '👩‍💼 Secrétaire'}{u.specialty ? ` · ${u.specialty}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Doctor/Secretary: patients results */}
                 {matchPatients.length > 0 && (
                   <div>
                     <div style={{ padding: '0.5rem 1rem', fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-500)', textTransform: 'uppercase', letterSpacing: '0.08em', background: 'rgba(0,0,0,0.15)' }}>
@@ -129,6 +170,20 @@ export default function AppTopbar() {
         <button className="topbar-icon-btn" title="Notifications">
           <Bell size={17} />
           <span className="topbar-notif-dot" />
+        </button>
+        <button
+          className="topbar-icon-btn"
+          title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+          onClick={toggle}
+          style={{ position: 'relative' }}
+        >
+          <span style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'transform 0.4s ease, opacity 0.3s ease',
+            transform: theme === 'dark' ? 'rotate(0deg)' : 'rotate(180deg)',
+          }}>
+            {theme === 'dark' ? <Sun size={17} color="#fbbf24" /> : <Moon size={17} color="#6366f1" />}
+          </span>
         </button>
         <button className="topbar-icon-btn" title="Paramètres"><Settings size={17} /></button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', paddingLeft: '0.75rem', borderLeft: '1px solid var(--border)' }}>

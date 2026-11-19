@@ -35,18 +35,30 @@ export default function SecretaireRendezvous() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
+  const [dateError, setDateError] = useState('')
   const [success, setSuccess] = useState('')
   const weekDates = getWeekDates(weekOffset)
+
+  // Today's date in YYYY-MM-DD format (for min attribute)
+  const today = new Date().toISOString().split('T')[0]
 
   const handleCreate = (e) => {
     e.preventDefault()
     if (!form.patientId || !form.date || !form.time) return
+
+    // Date must be >= today
+    if (form.date < today) {
+      setDateError('La date doit être aujourd’hui ou dans le futur.')
+      return
+    }
+    setDateError('')
+
     const patient = patients.find(p => p.id === form.patientId)
     addAppointment({
       ...form,
       patientName: patient?.name || '',
-      doctorId: linkedDoctor?.id || '',         // auto from link
-      doctorName: linkedDoctor?.name || '',      // auto from link
+      doctorId: linkedDoctor?.id || '',
+      doctorName: linkedDoctor?.name || '',
     })
     setSuccess('Rendez-vous créé avec succès !')
     setForm({ ...EMPTY_FORM })
@@ -122,7 +134,20 @@ export default function SecretaireRendezvous() {
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Date *</label>
-                <input className="form-input" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} required />
+                <input
+                  className="form-input"
+                  type="date"
+                  value={form.date}
+                  min={today}
+                  onChange={e => { setForm({ ...form, date: e.target.value }); setDateError('') }}
+                  required
+                  style={dateError ? { borderColor: 'var(--danger)', boxShadow: '0 0 0 3px rgba(239,68,68,0.15)' } : {}}
+                />
+                {dateError && (
+                  <div style={{ color: 'var(--danger)', fontSize: '0.73rem', marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    ⚠️ {dateError}
+                  </div>
+                )}
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Heure *</label>

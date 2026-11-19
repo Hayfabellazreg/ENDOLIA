@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { getStoredUsers, saveUsers } from '../../context/AuthContext'
-import { UserPlus, Trash2, Eye, EyeOff, AlertCircle, Link2 } from 'lucide-react'
+import { UserPlus, Trash2, Eye, EyeOff, Link2 } from 'lucide-react'
 
 function genId(prefix) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}`
 }
 
 const EMPTY = {
-  doctorName: '', doctorEmail: '', doctorPassword: '', doctorSpecialty: 'Gastro-entérologue',
+  doctorName: '', doctorEmail: '', doctorPassword: '', doctorSpecialty: '',
   secretaireName: '', secretaireEmail: '', secretairePassword: '',
 }
 
@@ -94,6 +94,7 @@ export default function AdminUsers() {
           placeholder={placeholder}
           value={form[field]}
           onChange={e => setForm({ ...form, [field]: e.target.value })}
+          autoComplete={type === 'password' ? 'new-password' : type === 'email' ? 'off' : 'off'}
           style={pwdKey ? { paddingRight: '2.5rem' } : {}}
         />
         {pwdKey && (
@@ -131,7 +132,10 @@ export default function AdminUsers() {
           <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Link2 size={16} color="var(--accent-light)" /> Nouveau binôme Médecin ↔ Secrétaire
           </h3>
-          <form onSubmit={handleCreate}>
+          <form onSubmit={handleCreate} autoComplete="off">
+            {/* Dummy hidden fields to prevent browser autofill */}
+            <input type="text" name="username" style={{ display: 'none' }} readOnly />
+            <input type="password" name="password" style={{ display: 'none' }} readOnly />
             <div className="section-grid-2" style={{ gap: '2rem' }}>
               {/* Doctor side */}
               <div>
@@ -139,7 +143,7 @@ export default function AdminUsers() {
                   <span>🩺</span> Médecin
                 </div>
                 <F label="Nom complet *" field="doctorName" placeholder="Dr. Prénom Nom" error={errors.doctorName} />
-                <F label="Spécialité" field="doctorSpecialty" placeholder="ex: Gastro-entérologue" />
+                <F label="Spécialité" field="doctorSpecialty" placeholder="ex: Gastro-entérologue, Cardiologue…" />
                 <F label="Email *" field="doctorEmail" type="email" placeholder="medecin@endolia.com" error={errors.doctorEmail} />
                 <F label="Mot de passe *" field="doctorPassword" type="password" placeholder="Min. 6 caractères" error={errors.doctorPassword} pwdKey="doc" />
               </div>
@@ -225,17 +229,7 @@ export default function AdminUsers() {
         })}
       </div>
 
-      {/* Info */}
-      <div className="card" style={{ marginTop: '1.5rem', background: 'var(--accent-soft)', borderColor: 'var(--border-accent)' }}>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <AlertCircle size={16} color="var(--accent-light)" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-300)', lineHeight: 1.7 }}>
-            <strong style={{ color: 'var(--accent-light)' }}>Logique du système :</strong> Chaque secrétaire est liée à un médecin.
-            Les patients et rendez-vous créés par la secrétaire sont automatiquement attribués à son médecin.
-            La secrétaire n'a pas à choisir le médecin à chaque création.
-          </div>
-        </div>
-      </div>
+
     </div>
   )
 }

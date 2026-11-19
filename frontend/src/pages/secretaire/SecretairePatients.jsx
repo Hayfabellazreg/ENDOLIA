@@ -5,8 +5,17 @@ import { getStoredUsers } from '../../context/AuthContext'
 import { UserPlus, Search, Trash2, Edit, X, Check } from 'lucide-react'
 
 const COLORS = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
-const EMPTY_FORM = { name: '', dob: '', phone: '', email: '', address: '', status: 'nouveau', antecedents: 'Aucun notable', allergies: 'Aucune connue' }
-const STATUS = { actif: { label: 'Actif', cls: 'badge-success' }, en_cours: { label: 'En cours', cls: 'badge-warning' }, nouveau: { label: 'Nouveau', cls: 'badge-blue' } }
+const EMPTY_FORM = { name: '', dob: '', phone: '', email: '', address: '', antecedents: 'Aucun notable', allergies: 'Aucune connue' }
+const STATUS = { actif: { label: 'Actif', cls: 'badge-success' }, en_cours: { label: 'En cours ↗', cls: 'badge-warning' }, nouveau: { label: 'Nouveau', cls: 'badge-blue' } }
+
+// Compute patient status automatically from their appointments
+const today = new Date().toISOString().split('T')[0]
+function getPatientStatus(patientId, appointments) {
+  const rdvs = appointments.filter(a => a.patientId === patientId)
+  if (rdvs.length === 0) return 'nouveau'
+  const hasUpcoming = rdvs.some(a => a.date >= today)
+  return hasUpcoming ? 'en_cours' : 'actif'
+}
 
 function calcAge(dob) {
   if (!dob) return ''
@@ -16,7 +25,7 @@ function calcAge(dob) {
 }
 
 export default function SecretairePatients() {
-  const { patients, addPatient, updatePatient, deletePatient } = useApp()
+  const { patients, appointments, addPatient, updatePatient, deletePatient } = useApp()
   const { currentUser } = useAuth()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('tous')
@@ -34,7 +43,8 @@ export default function SecretairePatients() {
   const filtered = myPatients.filter(p => {
     const ms = p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.email?.toLowerCase().includes(search.toLowerCase()) || p.phone?.includes(search)
-    const mf = filter === 'tous' || p.status === filter
+    const computedStatus = getPatientStatus(p.id, appointments)
+    const mf = filter === 'tous' || computedStatus === filter
     return ms && mf
   })
 
@@ -57,7 +67,7 @@ export default function SecretairePatients() {
   }
 
   const startEdit = (p) => {
-    setForm({ name: p.name, dob: p.dob, phone: p.phone, email: p.email, address: p.address, status: p.status, antecedents: p.antecedents, allergies: p.allergies })
+    setForm({ name: p.name, dob: p.dob, phone: p.phone, email: p.email, address: p.address, antecedents: p.antecedents, allergies: p.allergies })
     setEditId(p.id)
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -118,14 +128,7 @@ export default function SecretairePatients() {
                     value={form[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
                 </div>
               ))}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Statut</label>
-                <select className="form-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                  <option value="nouveau">Nouveau</option>
-                  <option value="actif">Actif</option>
-                  <option value="en_cours">En cours</option>
-                </select>
-              </div>
+
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Antécédents</label>
                 <input className="form-input" value={form.antecedents} onChange={e => setForm({ ...form, antecedents: e.target.value })} />
@@ -165,14 +168,14 @@ export default function SecretairePatients() {
           <span className="table-count">{filtered.length} patient{filtered.length > 1 ? 's' : ''}</span>
         </div>
         <table>
-          <thead><tr><th>Patient</th><th>Contact</th><th>Date de naissance</th><th>Statut</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Patient</th><th>Contact</th><th>Date de naissance</th><th>Statut <span style={{fontSize:'0.65rem',fontWeight:400,color:'var(--text-500)'}}>(auto)</span></th><th>Actions</th></tr></thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-400)' }}>
                 {myPatients.length === 0 ? 'Aucun patient enregistré. Créez le premier patient.' : 'Aucun résultat.'}
               </td></tr>
             ) : filtered.map((p, i) => {
-              const s = STATUS[p.status] || STATUS.nouveau
+              const s = STATUS[getPatientStatus(p.id, appointments)] || STATUS.nouveau
               return (
                 <tr key={p.id}>
                   <td>

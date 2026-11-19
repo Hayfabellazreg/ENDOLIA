@@ -7,6 +7,12 @@ import { Users, Calendar, Clock, ArrowRight, UserPlus, Link2 } from 'lucide-reac
 const COLORS = ['avatar-blue', 'avatar-teal', 'avatar-violet', 'avatar-rose', 'avatar-amber']
 const TYPE_CLS = { Coloscopie: 'cal-event-colonoscopie', Consultation: 'cal-event-consultation', Suivi: 'cal-event-suivi', Gastroscopie: 'cal-event-gastroscopie' }
 
+function getPatientStatus(patientId, appointments, today) {
+  const rdvs = appointments.filter(a => a.patientId === patientId)
+  if (rdvs.length === 0) return 'nouveau'
+  return rdvs.some(a => a.date >= today) ? 'en_cours' : 'actif'
+}
+
 export default function SecretaireDashboard() {
   const { patients, appointments } = useApp()
   const { currentUser } = useAuth()
@@ -58,7 +64,7 @@ export default function SecretaireDashboard() {
           { label: 'Patients', value: myPatients.length, icon: Users, color: 'blue' },
           { label: 'RDV aujourd\'hui', value: todayRdv.length, icon: Calendar, color: 'purple' },
           { label: 'RDV à venir', value: upcoming.length, icon: Clock, color: 'cyan' },
-          { label: 'Nouveaux patients', value: myPatients.filter(p => p.status === 'nouveau').length, icon: UserPlus, color: 'green' },
+          { label: 'Nouveaux patients', value: myPatients.filter(p => getPatientStatus(p.id, appointments, today) === 'nouveau').length, icon: UserPlus, color: 'green' },
         ].map(s => (
           <div key={s.label} className={`stat-card stat-card-${s.color}`}>
             <div className={`stat-icon stat-icon-${s.color}`}><s.icon size={20} /></div>
@@ -133,7 +139,7 @@ export default function SecretaireDashboard() {
                       <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{p.name}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-400)' }}>{p.phone}</div>
                     </div>
-                    <span className={`badge ${sc[p.status]}`}><span className="badge-dot" />{sl[p.status]}</span>
+                    <span className={`badge ${sc[getPatientStatus(p.id, appointments, today)]}`}><span className="badge-dot" />{sl[getPatientStatus(p.id, appointments, today)]}</span>
                   </div>
                 )
               })}

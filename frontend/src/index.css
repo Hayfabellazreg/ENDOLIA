@@ -8,12 +8,18 @@ body {
   margin: 0;
   padding: 0;
   background: #060a12;
+  transition: background-color 0.25s ease;
+}
+
+[data-theme="light"] body {
+  background: #f0f4f8;
 }
 
 #root {
   min-height: 100vh;
 }
 
+/* ===== SELECT — DARK ===== */
 select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
@@ -21,4 +27,40 @@ select {
   background-position: right 0.9rem center;
   padding-right: 2.5rem !important;
   cursor: pointer;
+  color: #e2e8f0 !important;
+  background-color: #0f172a !important;
+}
+
+select option {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
+select option:checked {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+/* ===== SELECT — LIGHT ===== */
+[data-theme="light"] select {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: rgba(0,0,0,0.12) !important;
+}
+
+[data-theme="light"] select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+[data-theme="light"] select option:checked {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+/* ===== INPUT DATE — LIGHT ===== */
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="time"] {
+  color-scheme: light;
 }
