@@ -29,6 +29,7 @@ const SEED = {
     { id: 'RPT-021', examenId: 'EX-4521', patientId: 'P-002', patient: 'Karim Mekni', doctorId: 'USR-002', date: '28/03/2025', type: 'Coloscopie', conclusion: "Polype sessile 6mm retiré au niveau du côlon transverse. Biopsie envoyée. Contrôle dans 3 ans.", status: 'valide' },
     { id: 'RPT-020', examenId: 'EX-4480', patientId: 'P-003', patient: 'Youssef Hammami', doctorId: 'USR-002', date: '15/03/2025', type: 'Coloscopie', conclusion: "Examen sans anomalie. Muqueuse d'aspect normal sur toute la longueur explorée.", status: 'valide' },
   ],
+  notifications: [],
 }
 
 function genId(prefix) {
@@ -46,6 +47,15 @@ function reducer(state, action) {
     case 'ADD_EXAMEN':    return { ...state, examens: [...state.examens, action.payload] }
     case 'UPDATE_EXAMEN': return { ...state, examens: state.examens.map(e => e.id === action.id ? { ...e, ...action.payload } : e) }
     case 'ADD_RAPPORT':    return { ...state, rapports: [...state.rapports, action.payload] }
+    // Notifications actions
+    case 'ADD_NOTIFICATION':
+      return { ...state, notifications: [action.payload, ...(state.notifications || [])] }
+    case 'MARK_READ':
+      return { ...state, notifications: (state.notifications || []).map(n => n.id === action.id ? { ...n, read: true } : n) }
+    case 'MARK_ALL_READ':
+      return { ...state, notifications: (state.notifications || []).map(n => ({ ...n, read: true })) }
+    case 'CLEAR_NOTIFICATIONS':
+      return { ...state, notifications: [] }
     default: return state
   }
 }
@@ -55,12 +65,12 @@ function loadState() {
     const s = localStorage.getItem(STORAGE_KEY)
     if (s) {
       const parsed = JSON.parse(s)
-      // Version check: if old data, reset to seed
       if (!parsed.version || parsed.version < DATA_VERSION) {
         localStorage.removeItem(STORAGE_KEY)
         return { ...SEED }
       }
-      return parsed
+      // Preserve notifications array for older data structures
+      return { notifications: [], ...parsed }
     }
   } catch {}
   return { ...SEED }
@@ -73,15 +83,61 @@ export function AppProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, version: DATA_VERSION }))
   }, [state])
 
-  const addPatient    = useCallback((data) => { const p = { ...data, id: genId('P'), createdAt: new Date().toISOString().split('T')[0] }; dispatch({ type: 'ADD_PATIENT', payload: p }); return p }, [])
+  // Notification helper
+  const pushNotification = useCallback((notif) => {
+    dispatch({
+      type: 'ADD_NOTIFICATION',
+      payload: {
+        id: genId('NOTIF'),
+        read: false,
+        createdAt: new Date().toISOString(),
+        ...notif,
+      },
+    })
+  }, [])
+
+  const markRead = useCallback((id) => dispatch({ type: 'MARK_READ', id }), [])
+  const markAllRead = useCallback(() => dispatch({ type: 'MARK_ALL_READ' }), [])
+  const clearNotifications = useCallback(() => dispatch({ type: 'CLEAR_NOTIFICATIONS' }), [])
+
+  // CRUD actions with automatic notifications
+  const addPatient = useCallback((data) => {
+    const p = { ...data, id: genId('P'), createdAt: new Date().toISOString().split('T')[0] }
+    dispatch({ type: 'ADD_PATIENT', payload: p })
+    if (data.doctorId) {
+      pushNotification({
+        type: 'patient',
+        icon: '👤',
+        title: 'Nouveau patient ajouté',
+        message: `${p.name} a été enregistré(e) dans votre liste de patients.`,
+        targetUserId: data.doctorId,
+      })
+    }
+    return p
+  }, [pushNotification])
+
   const updatePatient = useCallback((id, data) => dispatch({ type: 'UPDATE_PATIENT', id, payload: data }), [])
   const deletePatient = useCallback((id) => dispatch({ type: 'DELETE_PATIENT', id }), [])
 
-  const addAppointment    = useCallback((data) => { const a = { ...data, id: genId('RDV'), createdAt: new Date().toISOString() }; dispatch({ type: 'ADD_APPOINTMENT', payload: a }); return a }, [])
+  const addAppointment = useCallback((data) => {
+    const a = { ...data, id: genId('RDV'), createdAt: new Date().toISOString() }
+    dispatch({ type: 'ADD_APPOINTMENT', payload: a })
+    if (data.doctorId) {
+      pushNotification({
+        type: 'rdv',
+        icon: '📅',
+        title: 'Nouveau rendez‑vous planifié',
+        message: `${data.patientName} – ${data.type} le ${data.date} à ${data.time}.`,
+        targetUserId: data.doctorId,
+      })
+    }
+    return a
+  }, [pushNotification])
+
   const updateAppointment = useCallback((id, data) => dispatch({ type: 'UPDATE_APPOINTMENT', id, payload: data }), [])
   const deleteAppointment = useCallback((id) => dispatch({ type: 'DELETE_APPOINTMENT', id }), [])
 
-  const addExamen    = useCallback((data) => { const e = { ...data, id: genId('EX'), createdAt: new Date().toISOString() }; dispatch({ type: 'ADD_EXAMEN', payload: e }); return e }, [])
+  const addExamen = useCallback((data) => { const e = { ...data, id: genId('EX'), createdAt: new Date().toISOString() }; dispatch({ type: 'ADD_EXAMEN', payload: e }); return e }, [])
   const updateExamen = useCallback((id, data) => dispatch({ type: 'UPDATE_EXAMEN', id, payload: data }), [])
 
   const addRapport = useCallback((data) => {
@@ -90,8 +146,8 @@ export function AppProvider({ children }) {
     return r
   }, [])
 
-  const getUsers  = useCallback(() => getStoredUsers(), [])
-  const addUser   = useCallback((data) => { const users = getStoredUsers(); const u = { ...data, id: genId('USR'), createdAt: new Date().toISOString().split('T')[0] }; saveUsers([...users, u]); return u }, [])
+  const getUsers = useCallback(() => getStoredUsers(), [])
+  const addUser = useCallback((data) => { const users = getStoredUsers(); const u = { ...data, id: genId('USR'), createdAt: new Date().toISOString().split('T')[0] }; saveUsers([...users, u]); return u }, [])
   const deleteUser = useCallback((id) => { const users = getStoredUsers().filter(u => u.id !== id); saveUsers(users) }, [])
 
   const value = {
@@ -99,13 +155,15 @@ export function AppProvider({ children }) {
     appointments: state.appointments,
     examens: state.examens,
     rapports: state.rapports,
+    notifications: state.notifications || [],
     addPatient, updatePatient, deletePatient,
     addAppointment, updateAppointment, deleteAppointment,
     addExamen, updateExamen,
     addRapport,
     getUsers, addUser, deleteUser,
+    markRead, markAllRead, clearNotifications,
     getPatientById: (id) => state.patients.find(p => p.id === id),
-    getExamenById:  (id) => state.examens.find(e => e.id === id),
+    getExamenById: (id) => state.examens.find(e => e.id === id),
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

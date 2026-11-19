@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Search, Bell, Settings, X, Sun, Moon } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import NotificationItem from '../components/NotificationItem'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { useNavigate } from 'react-router-dom'
@@ -9,17 +10,21 @@ const ROLE_LABEL = { admin: 'Administrateur', doctor: null, secretaire: 'Secrét
 
 export default function AppTopbar() {
   const { currentUser } = useAuth()
-  const { patients, appointments, getUsers } = useApp()
+  const { patients, appointments, getUsers, notifications, markAllRead } = useApp()
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
   const [query, setQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
+  const [showNotif, setShowNotif] = useState(false)
   const ref = useRef(null)
 
   const now = new Date()
   const dateStr = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const initials = currentUser?.name?.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??'
-  const roleLabel = currentUser?.specialty || ROLE_LABEL[currentUser?.role] || currentUser?.role
+  const roleLabel = currentUser?.specialty || ROLE_LABEL[currentUser?.role] || currentUser?.role;
+  // Filter notifications for the logged-in doctor (or secretary) based on targetUserId
+  const doctorNotifs = (notifications || []).filter(n => n.targetUserId === currentUser?.id);
+  const unreadCount = doctorNotifs.filter(n => !n.read).length
 
   // Search results
   const q = query.trim().toLowerCase()
@@ -167,10 +172,39 @@ export default function AppTopbar() {
 
       <div className="topbar-right">
         <span className="topbar-date">{dateStr}</span>
-        <button className="topbar-icon-btn" title="Notifications">
-          <Bell size={17} />
-          <span className="topbar-notif-dot" />
-        </button>
+        {/* Notification bell with dropdown */}
+        <div style={{ position: 'relative' }}>
+          <button
+            className="topbar-icon-btn"
+            title="Notifications"
+            onClick={() => setShowNotif(prev => !prev)}
+          >
+            <Bell size={17} />
+            {unreadCount > 0 && <span className="topbar-notif-badge">{unreadCount}</span>}
+          </button>
+          {showNotif && (
+            <div className="notification-dropdown">
+              {doctorNotifs.length === 0 ? (
+                <div style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-400)' }}>
+                  Aucune notification
+                </div>
+              ) : (
+                <>
+                  {doctorNotifs.map((n) => (
+                    <NotificationItem key={n.id} notification={n} />
+                  ))}
+                  <button
+                    className="mark-all-read-btn"
+                    onClick={markAllRead}
+                    style={{ width: '100%', padding: '0.5rem', background: 'var(--accent-soft)', border: 'none', cursor: 'pointer', color: 'var(--accent-light)' }}
+                  >
+                    Tout marquer comme lu
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
         <button
           className="topbar-icon-btn"
           title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}

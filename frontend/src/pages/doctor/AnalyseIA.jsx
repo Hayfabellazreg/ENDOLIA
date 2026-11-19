@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import {
   Upload, Brain, CheckCircle, AlertCircle, Zap, FileText,
-  RotateCcw, Video, Download, Eye, Play, Sliders, User, Clock
+  RotateCcw, Video, Download, Eye, Play, User, Clock
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -403,35 +403,6 @@ export default function AnalyseIA() {
                   )}
                 </div>
               )}
-            </div>
-
-            {/* 3. Paramètres de l'IA */}
-            <div className="card" style={{ marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <Sliders size={16} color="var(--accent-light)" />
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>3. Paramètres du Modèle YOLOv8</h3>
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.82rem' }}>
-                  <span style={{ color: 'var(--text-300)' }}>Seuil de confiance minimal (Confidence)</span>
-                  <strong style={{ color: 'var(--accent-light)' }}>{(confThreshold * 100).toFixed(0)} %</strong>
-                </div>
-                <input
-                  type="range"
-                  min="0.10"
-                  max="0.90"
-                  step="0.05"
-                  value={confThreshold}
-                  onChange={(e) => setConfThreshold(parseFloat(e.target.value))}
-                  style={{ width: '100%', accentColor: 'var(--accent)' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-500)', marginTop: '0.2rem' }}>
-                  <span>10% (Très sensible)</span>
-                  <span>25% (Recommandé)</span>
-                  <span>90% (Strict)</span>
-                </div>
-              </div>
             </div>
 
             {/* Bouton Lancement */}
